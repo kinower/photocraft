@@ -67,6 +67,10 @@ const MID_GREY: f32 = 0.46;
 /// `base` supplies everything Auto does not own (white balance, encoding, pixel scale, the
 /// black-and-white treatment), and its Auto-owned settings are ignored.
 pub fn auto_tone(px: &[[f32; 4]], w: usize, h: usize, base: &CameraRaw) -> AutoTone {
+    auto_tone_impl(px, w, h, base, true)
+}
+
+fn auto_tone_impl(px: &[[f32; 4]], w: usize, h: usize, base: &CameraRaw, cache_light: bool) -> AutoTone {
     let Some((small, sw, sh)) = downsample(px, w, h) else { return AutoTone::default() };
     // Only white balance, the light stage and the encoding matter for the measurement.
     let p = CameraRaw {
@@ -77,15 +81,18 @@ pub fn auto_tone(px: &[[f32; 4]], w: usize, h: usize, base: &CameraRaw) -> AutoT
         seed: base.seed,
         ..CameraRaw::default()
     };
-    let measure = |p: &CameraRaw| -> Option<Vec<f32>> {
-        let mut img = small.clone();
-        develop(&mut img, sw, sh, p, false);
+    let luminances = |img: &[[f32; 4]]| -> Option<Vec<f32>> {
         let mut lum: Vec<f32> = img.iter().filter(|q| q[3] >= 0.5).map(|q| luma([q[0], q[1], q[2]]).clamp(0.0, 1.0)).filter(|v| v.is_finite()).collect();
         if lum.is_empty() {
             return None;
         }
         lum.sort_by(f32::total_cmp);
         Some(lum)
+    };
+    let measure = |p: &CameraRaw| {
+        let mut img = small.clone();
+        develop(&mut img, sw, sh, p, false);
+        luminances(&img)
     };
     let Some(original) = measure(&p) else { return AutoTone::default() };
 
@@ -110,8 +117,34 @@ pub fn auto_tone(px: &[[f32; 4]], w: usize, h: usize, base: &CameraRaw) -> AutoT
     if percentile(&exposed, 0.995) - percentile(&exposed, 0.005) < 0.04 {
         fit.contrast = 0.0;
     } else {
-        fit.whites = bisect(-60.0, 60.0, |v| percentile(&measure(&CameraRaw { whites: v, ..fit.clone() }).unwrap_or_default(), 0.995) - 0.97).round();
-        fit.blacks = bisect(-60.0, 60.0, |v| percentile(&measure(&CameraRaw { blacks: v, ..fit.clone() }).unwrap_or_default(), 0.005) - 0.03).round();
+        // The light stage is identical for every Whites/Blacks candidate. Keep its
+        // unclipped output: clipping here would change the subsequent global curves.
+        let mut light = small.clone();
+        if cache_light {
+            develop(&mut light, sw, sh, &fit, true);
+        }
+        let enc = super::Encoding::of(fit.encoding_gamma);
+        let (bp, wp) = if cache_light { super::luminance_points(&light, sw, sh, enc) } else { (0.0, 0.0) };
+        let measure_ends = |p: &CameraRaw| {
+            if !cache_light {
+                return measure(p);
+            }
+            let mut img = light.clone();
+            if p.whites != 0.0 || p.blacks != 0.0 {
+                let (xw, xb) = super::whites_blacks::amounts(p.whites.clamp(-100.0, 100.0), p.blacks.clamp(-100.0, 100.0), bp, wp);
+                super::whites_blacks::apply(&mut img, sw, xw, xb, enc);
+            }
+            if !p.is_identity() {
+                for q in &mut img {
+                    for c in q.iter_mut().take(3) {
+                        *c = c.clamp(0.0, 1.0);
+                    }
+                }
+            }
+            luminances(&img)
+        };
+        fit.whites = bisect(-60.0, 60.0, |v| percentile(&measure_ends(&CameraRaw { whites: v, ..fit.clone() }).unwrap_or_default(), 0.995) - 0.97).round();
+        fit.blacks = bisect(-60.0, 60.0, |v| percentile(&measure_ends(&CameraRaw { blacks: v, ..fit.clone() }).unwrap_or_default(), 0.005) - 0.03).round();
     }
 
     // 4. Vibrance and a little Saturation for dull colour, never into a black-and-white treatment.
@@ -252,6 +285,41 @@ mod tests {
         let mut lum: Vec<f32> = out.iter().map(|q| luma([q[0], q[1], q[2]])).collect();
         lum.sort_by(f32::total_cmp);
         percentile(&lum, 0.5)
+    }
+
+    #[test]
+    fn cached_light_matches_full_develop_search() {
+        for (w, h) in [(31, 19), (193, 101)] {
+            for kind in 0..4 {
+                let px = image(w, h, |x, y| {
+                    let v = ((x * 73 + y * 37) % 257) as f32 / 256.0;
+                    match kind {
+                        0 => [v, v * 0.8, v * 0.3, 1.0],
+                        1 => [v * 0.08, v * 0.1, v * 0.12, 1.0],
+                        2 => [0.8 + v * 0.4, 0.9 + v * 0.2, v, if x % 3 == 0 { 0.2 } else { 1.0 }],
+                        _ => [0.3, 0.3, 0.3, 1.0],
+                    }
+                });
+                for gamma in [0.0, 1.8, 2.2] {
+                    let base = CameraRaw { temperature: 27.0, tint: -13.0, encoding_gamma: gamma, ..Default::default() };
+                    assert_eq!(auto_tone(&px, w, h, &base), auto_tone_impl(&px, w, h, &base, false), "{w}x{h}, kind={kind}, gamma={gamma}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "release timing of the full and cached Camera Raw Auto paths"]
+    fn auto_tone_timing() {
+        let px = image(900, 900, |x, y| {
+            let v = (x + y) as f32 / 1798.0;
+            [v, v * 0.8, v * 0.6, 1.0]
+        });
+        for cache in [false, true] {
+            let start = std::time::Instant::now();
+            let value = auto_tone_impl(&px, 900, 900, &CameraRaw::default(), cache);
+            println!("cache={cache}: {:?}, {value:?}", start.elapsed());
+        }
     }
 
     #[test]
