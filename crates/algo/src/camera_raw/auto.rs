@@ -124,7 +124,7 @@ fn auto_tone_impl(px: &[[f32; 4]], w: usize, h: usize, base: &CameraRaw, cache_l
             develop(&mut light, sw, sh, &fit, true);
         }
         let enc = super::Encoding::of(fit.encoding_gamma);
-        let (bp, wp) = if cache_light { super::luminance_points(&light, sw, sh, enc) } else { (0.0, 0.0) };
+        let (bp, wp) = if cache_light { super::luminance_points(&light, sw, sh, enc, |q| q) } else { (0.0, 0.0) };
         let measure_ends = |p: &CameraRaw| {
             if !cache_light {
                 return measure(p);
