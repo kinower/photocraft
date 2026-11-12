@@ -687,7 +687,8 @@ pub enum Started {
 
 /// Commands that never edit the active document, allowed while a job runs on it.
 fn independent_of_document(id: &str) -> bool {
-    const PREFIXES: &[&str] = &["jobs.", "tools.", "view.", "window.", "help.", "brush.presets.", "gradient.presets."];
+    const PREFIXES: &[&str] =
+        &["genstudio.studio.", "genstudio.reference.", "jobs.", "tools.", "view.", "window.", "help.", "brush.presets.", "gradient.presets."];
     const IDS: &[&str] = &["file.new", "file.close", "file.closeAll", "edit.preferences", "edit.colorSettings", "edit.keyboardShortcuts", "edit.menus"];
     PREFIXES.iter().any(|p| id.starts_with(p)) || IDS.contains(&id)
 }
@@ -1530,6 +1531,7 @@ impl Session {
         }
         #[cfg(not(target_arch = "wasm32"))]
         self.reap_draining_jobs();
+        crate::genstudio_queue::tick(self);
         std::mem::take(&mut self.jobs.events)
     }
 

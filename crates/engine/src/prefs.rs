@@ -1318,6 +1318,7 @@ impl LayerMaskOverlay {
 #[serde(default, rename_all = "camelCase")]
 pub struct Preferences {
     pub actions: Actions,
+    pub gen_studio: crate::genstudio::Settings,
     pub general: General,
     pub interface: Interface,
     pub workspace: Workspace,

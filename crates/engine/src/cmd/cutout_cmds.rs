@@ -52,6 +52,9 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
     let doc = &s.active().ok_or(EngineError::NoDocument)?.doc;
     let layer = doc.layer(id).ok_or(EngineError::NoLayer(id))?;
     check(doc, layer).map_err(EngineError::Other)?;
+    if crate::genstudio::segmentation(s) {
+        return crate::gengate_segmentation::run(s, p, "background");
+    }
     let sample_all = p.get("sampleAllLayers").and_then(Value::as_bool).unwrap_or(false);
     let refine = p.get("refine").and_then(Value::as_bool).unwrap_or(true);
     let area = subject_area(layer, doc.bounds(), sample_all);

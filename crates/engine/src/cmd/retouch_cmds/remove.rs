@@ -22,6 +22,8 @@ use super::{
 };
 use photocraft_doc::Layer;
 
+pub(crate) mod qwen;
+
 const CMD: &str = "paint.remove";
 
 /// The History step of an applied removal, as Photoshop names it (#12541). The job and its
@@ -236,6 +238,15 @@ fn result_layer_name(doc: &Document) -> String {
 }
 
 pub(super) fn remove(s: &mut Session, p: &Value) -> Result<Value> {
+    for key in ["useAiFill", "useQwen"] {
+        if p.get(key).is_some_and(|v| !v.is_boolean()) {
+            return Err(bad(CMD, format!("`{key}` must be a boolean")));
+        }
+    }
+    if flag(p, "useAiFill", flag(p, "useQwen", false)) {
+        return qwen::remove(s, p);
+    }
+
     let plan = plan(s, p)?;
     let label = "Remove";
     let d = s.active().ok_or(EngineError::NoDocument)?;

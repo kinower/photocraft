@@ -50,6 +50,32 @@ pub fn is_enabled(app: &PhotocraftApp, id: &str) -> bool {
         return e;
     }
     match id {
+        // GenGate is not installed: its commands stay off; GenFill-K only uses the AI select/inspect ones.
+        i if !photocraft_engine::genstudio::INSTALLED
+            && (i == "edit.aiFill" || i.starts_with("genstudio.") && !matches!(i, "genstudio.ai.select" | "genstudio.ai.inspect")) =>
+        {
+            false
+        }
+        "genstudio.loras.append" => true,
+        "genstudio.loras.metadata.save" => true,
+        "genstudio.loras.settings" => true,
+        "genstudio.loras.configure" => true,
+        "genstudio.loras.open" => true,
+        "genstudio.settings.open" => true,
+        "genstudio.studio.inspect"
+        | "genstudio.studio.configure"
+        | "genstudio.studio.submit"
+        | "genstudio.studio.reference.browse"
+        | "genstudio.studio.reference.set"
+        | "genstudio.studio.reference.remove"
+        | "genstudio.studio.reference.selection"
+        | "genstudio.studio.layer.restore"
+        | "genstudio.studio.workflow.browse"
+        | "genstudio.studio.workflow.set" => true,
+        "genstudio.component.browse" => true,
+        "genstudio.open" | "genstudio.models.browse" | "genstudio.progress.set" => true,
+        "genfillk.open" => true,
+        "genstudio.ai.bar.set" => true,
         "window.panel.activate" | "window.panel.layout" | "ui.dock" => true,
         "window.panel.group"
         | "window.panel.move"

@@ -136,8 +136,8 @@ pub(super) fn first_settings(app: &PhotocraftApp, raw: &RawOpen) -> (CameraRaw, 
         && let Some(surf) = st.doc.layers.iter().find_map(|l| l.surface())
         && let Ok((area, w, h)) = super::convert::preview_area(st.doc.bounds(), surf)
     {
-        let (proxy, ..) = super::convert::box_proxy(surf, area, w, h);
-        photocraft_algo::camera_raw::auto_tone(&proxy, &mut p);
+        let (proxy, pw, ph, _) = super::convert::box_proxy(surf, area, w, h);
+        photocraft_algo::camera_raw::auto_tone(&proxy, pw, ph, &p).apply(&mut p);
     }
     (p, None)
 }

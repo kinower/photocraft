@@ -24,6 +24,7 @@ fn harness(tool: Tool, selection: bool, scale: f32) -> Harness<'static, Photocra
         if selection {
             app.run("select.rect", json!({"x": 40, "y": 40, "width": 200, "height": 100})).unwrap();
         }
+        app.ui.gen_studio.hide_ai_bar = true;
         app.ui.tool = tool;
         app
     });

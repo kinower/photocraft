@@ -311,6 +311,7 @@ struct ToolSet {
     frame_sides: Option<u32>,
     frame_target: Option<crate::frame_tool::Target>,
     tool: Option<Tool>,
+    object_ai_select: Option<bool>,
     gradient_classic: Option<bool>,
     stroke_trace: Option<&'static str>,
     eyedropper_size: Option<u32>,
@@ -334,6 +335,7 @@ impl ToolSet {
             frame_sides: frame_sides_param(p)?,
             frame_target: frame_target_param(p)?,
             tool: tool_param(p)?,
+            object_ai_select: bool_field(p, "objectAiSelect")?,
             gradient_classic: bool_field(p, "gradientClassic")?,
             stroke_trace: stroke_trace_param(p)?,
             // The Eyedropper's options bar (#1649): Sample Size, Sample, Show Sampling Ring.
@@ -384,6 +386,9 @@ impl ToolSet {
             // Each tool keeps its own brush (#218), so switch it in before `brushSize`
             // sets the new tool's size.
             crate::paint_mouse::sync_tool_brush(app);
+        }
+        if let Some(enabled) = self.object_ai_select {
+            app.ui.tool_options.object_ai_select = enabled;
         }
         self.apply_gradient_and_trace(app);
         if let Some(size) = self.eyedropper_size {

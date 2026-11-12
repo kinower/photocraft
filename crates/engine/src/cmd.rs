@@ -1449,6 +1449,12 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::rasterize_style_cmds::specs());
     v.extend(crate::variables_cmds::specs());
     v.extend(crate::plugin_cmds::specs());
+    v.extend(crate::genstudio::specs());
+    v.extend(crate::gengate_segmentation::specs());
+    v.extend(crate::genstudio_generate::specs());
+    v.extend(crate::genstudio_lora::specs());
+    v.extend(crate::genstudio_ai::specs());
+    v.extend(crate::genstudio_queue::specs());
     v.extend(crate::group_view_cmds::specs());
     v.extend(crate::fx_view_cmds::specs());
     v.extend(crate::fx_visibility_cmds::specs());

@@ -467,6 +467,9 @@ pub(crate) fn handle_forwarded(app: &mut PhotocraftApp, ctx: &egui::Context, eve
 /// once the main window or no window of the app has the keyboard, or one of its widgets takes
 /// keyboard focus, so the keys count as released then.
 pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) {
+    if crate::genstudio_ai_ui::prompt_delete_frame(app, ctx) {
+        return;
+    }
     let held = !ctx.input(|i| i.focused) && crate::panel_docking::other_window_keyboard(ctx) == Some(false);
     if !held {
         ctx.data_mut(|d| d.remove_temp::<std::collections::BTreeSet<Key>>(forwarded_down_id()));

@@ -299,6 +299,9 @@ fn object_selection(s: &mut Session, p: &Value) -> Result<Value> {
     if let Some(why) = s.active().and_then(|d| object_mode_refusal(d.doc.mode)) {
         return Err(EngineError::Other(why.into()));
     }
+    if crate::genstudio::INSTALLED && p.get("aiSelect").and_then(Value::as_bool) == Some(true) {
+        return crate::gengate_segmentation::run(s, p, "object");
+    }
     if p.get("rect").is_none()
         && let Some(pt) = point_param(p)
     {
@@ -338,6 +341,9 @@ impl SubjectCache {
 }
 
 fn select_subject(s: &mut Session, p: &Value) -> Result<Value> {
+    if crate::genstudio::segmentation(s) {
+        return crate::gengate_segmentation::run(s, p, "subject");
+    }
     // The selected layer's pixels; the composite only when no pixel layer is selected.
     let all_layers = b(p, "sampleAllLayers", false);
     let d = s.active().ok_or(EngineError::NoDocument)?;

@@ -7,7 +7,7 @@ use super::{
 };
 
 /// Preferences dialog sections in Photoshop's order: (id, title).
-pub const SECTIONS: [(&str, &str); 18] = [
+pub const SECTIONS: [(&str, &str); 19] = [
     ("general", "General"),
     ("interface", "Interface"),
     ("workspace", "Workspace"),
@@ -22,6 +22,7 @@ pub const SECTIONS: [(&str, &str); 18] = [
     ("unitsAndRulers", "Units & Rulers"),
     ("guidesGridAndSlices", "Guides, Grid & Slices"),
     ("plugIns", "Plugins"),
+    ("genStudio", "GenGate Settings"),
     ("type", "Type"),
     ("enhancedControls", "Enhanced Controls"),
     ("rawDefaults", "RAW Defaults"),
@@ -67,6 +68,8 @@ pub fn gpu_adapter_matches(name: &str, wanted: &str) -> bool {
 /// Choices of an enumerated preference (dotted path, e.g. `"cursors.painting"`).
 pub fn choices(path: &str) -> Option<&'static [&'static str]> {
     Some(match path {
+        "genStudio.engine" => &["comfy", "direct"],
+        "genStudio.comfyStartup" | "genStudio.directStartup" => &["off", "appStart", "firstRequest"],
         "general.colorPicker" => ColorPicker::NAMES,
         "general.imageInterpolation" => Interpolation::NAMES,
         "interface.theme" => Theme::NAMES,

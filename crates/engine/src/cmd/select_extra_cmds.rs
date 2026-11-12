@@ -47,6 +47,9 @@ impl Sampler for CompositeSampler<'_> {
 // ---------------------------------------------------------------- Sky
 
 fn select_sky(s: &mut Session, p: &Value) -> Result<Value> {
+    if crate::genstudio::segmentation(s) {
+        return crate::gengate_segmentation::run(s, p, "sky");
+    }
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let doc = d.doc.clone();
     let canvas = doc.bounds();

@@ -5,6 +5,7 @@ use super::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ToolOptions {
+    pub object_ai_select: bool,
     pub tolerance: f32,
     pub contiguous: bool,
     pub anti_alias: bool,
@@ -15,6 +16,8 @@ pub struct ToolOptions {
     pub object_finder: bool,
     /// Remove tool: the fill goes to a new layer above the target (Photoshop's Create a new layer).
     pub remove_new_layer: bool,
+    #[serde(alias = "remove_use_qwen")]
+    pub remove_ai_fill: bool,
     /// Remove tool: each stroke is filled when released (Photoshop's default). Off, the strokes
     /// collect as a tint on the canvas and ↩ applies them together (Esc drops them).
     pub remove_after_each_stroke: bool,
@@ -450,8 +453,10 @@ impl Default for ToolOptions {
             contiguous: true,
             anti_alias: true,
             sample_all: SampleAllLayers::default(),
+            object_ai_select: false,
             object_finder: true,
             remove_new_layer: false,
+            remove_ai_fill: false,
             remove_after_each_stroke: true,
             feather: 0.0,
             gradient_style: "linear".into(),

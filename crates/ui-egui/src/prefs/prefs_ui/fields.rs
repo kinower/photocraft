@@ -15,7 +15,7 @@ pub fn body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Valu
             f.insert("__gpuInfo".into(), json!(info));
             f.insert("__gpuAdapters".into(), json!(app.perf.gpu_info.adapters));
             let system = system_theme(app, ui.ctx());
-            prefs_body(ui, f, system);
+            prefs_body(app, ui, f, system);
         }
         "shortcuts" => shortcuts_body(app, ui, f),
         "presets" => presets_body(app, ui, f),
@@ -166,6 +166,7 @@ pub(super) fn preference_sections(values: &Value, search: &str) -> Vec<(&'static
     SECTIONS
         .iter()
         .copied()
+        .filter(|(id, _)| photocraft_engine::genstudio::INSTALLED || *id != "genStudio")
         .filter(|(id, title)| {
             query.is_empty()
                 || crate::i18n::Lang::EN.contains_ignore_case(title, query)
@@ -179,9 +180,10 @@ pub(super) fn preference_sections(values: &Value, search: &str) -> Vec<(&'static
 }
 
 /// Preferences: section list on the left, the section's settings on the right.
-fn prefs_body(ui: &mut egui::Ui, f: &mut Map<String, Value>, system: Option<egui::Theme>) {
+fn prefs_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>, system: Option<egui::Theme>) {
     let t = Tokens::get(ui.ctx());
     let mut section = f.get("section").and_then(Value::as_str).unwrap_or("general").to_string();
+    let mut studio_view = f.get("__genstudioView").cloned().unwrap_or_else(|| crate::genstudio_ui::preferences_view(app));
     let mut values = f.get("values").cloned().unwrap_or(Value::Null);
     // The dialog follows the language being edited, so a change shows before OK.
     let lang = crate::i18n::Lang::from_pref(values.pointer("/interface/language").and_then(Value::as_str).unwrap_or("auto"));
@@ -251,7 +253,11 @@ fn prefs_body(ui: &mut egui::Ui, f: &mut Map<String, Value>, system: Option<egui
                     ui.add_space(4.0);
                     ui.label(RichText::new(tl!("These settings aren't available in PhotoCraft yet.")).color(t.text_faint));
                 } else if let Some(obj) = values.get_mut(&section).and_then(Value::as_object_mut) {
-                    section_fields(ui, &section, obj, &order, lang, system, filter);
+                    if section == "genStudio" {
+                        crate::genstudio_ui::preferences(app, ui, obj, &mut studio_view);
+                    } else {
+                        section_fields(ui, &section, obj, &order, lang, system, filter);
+                    }
                     if section == "fileHandling" {
                         ui.label(
                             RichText::new(tl!("0 turns this threshold off; SVG groups nested deeper than 100 levels are always rasterized."))
@@ -276,6 +282,10 @@ fn prefs_body(ui: &mut egui::Ui, f: &mut Map<String, Value>, system: Option<egui
                     {
                         def.insert("favoriteFonts".into(), favorites);
                     }
+                    // GenGate: Reset Section also resets its view options.
+                    if section == "genStudio" {
+                        studio_view = json!({"progress": true, "bar": true});
+                    }
                     values[&section] = def;
                 }
             });
@@ -283,6 +293,7 @@ fn prefs_body(ui: &mut egui::Ui, f: &mut Map<String, Value>, system: Option<egui
     });
     f.insert("section".into(), json!(section));
     f.insert("__search".into(), json!(search));
+    f.insert("__genstudioView".into(), studio_view);
     f.insert("values".into(), values);
     // A colour swatch was clicked: open the Color Picker on that value (#2144).
     if let Some((path, name)) = ctx_take_pick(ui) {

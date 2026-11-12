@@ -157,6 +157,13 @@ pub fn finish(app: &mut PhotocraftApp, ctx: &egui::Context) {
         }
         return;
     }
+    if let Some(layer) = t.layers.first()
+        && crate::genstudio_canvas::layer_drop(app, ctx, t.source.0, *layer)
+    {
+        clear(ctx);
+        ctx.data_mut(|d| d.remove::<u64>(egui::Id::unique("layer-drag")));
+        return;
+    }
     if let Some((dest, at)) = target {
         drop(app, ctx, dest, at);
     }
