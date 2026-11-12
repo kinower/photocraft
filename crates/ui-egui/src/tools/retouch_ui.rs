@@ -934,9 +934,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
             crate::widgets::checkbox(ui, &mut o.sample_all.remove, tl!("Sample All Layers"));
             ui.add_enabled_ui(composite, |ui| crate::widgets::checkbox(ui, &mut o.remove_new_layer, tl!("Create a new layer")));
             crate::widgets::checkbox(ui, &mut o.remove_after_each_stroke, tl!("Remove after each stroke"));
-            if photocraft_engine::genstudio::INSTALLED {
-                crate::widgets::checkbox(ui, &mut o.remove_ai_fill, "Ai Fill");
-            }
+            ai_remove_option(ui, o);
             if !app.remove_pending.is_empty() {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if crate::widgets::primary_button(ui, "✓", 32.0)
@@ -1222,6 +1220,13 @@ fn pattern_stamp_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     crate::widgets::value_field(ui, &mut o.pattern_stamp_angle, -180.0..=180.0, "°", 58.0);
     if picked {
         let _ = app.run("pattern.presets.select", json!({"pattern": pat}));
+    }
+}
+
+/// AI Remove stays absent when GenGate is not installed.
+fn ai_remove_option(ui: &mut egui::Ui, options: &mut crate::state::ToolOptions) {
+    if photocraft_engine::genstudio::INSTALLED {
+        crate::widgets::checkbox(ui, &mut options.remove_ai_fill, "Ai Fill");
     }
 }
 
