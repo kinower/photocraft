@@ -128,7 +128,9 @@ impl PhotocraftApp {
         let dropped = ctx.input(|i| i.raw.dropped_files.clone());
         if !dropped.is_empty() {
             let at = self.cursor_pos(ctx);
-            self.open_dropped(ctx, dropped, at);
+            if !crate::genstudio_canvas::dropped(self, ctx, &dropped, at) {
+                self.open_dropped(ctx, dropped, at);
+            }
             // Files dragged in from another app's window: PhotoCraft comes to the front and takes
             // the keyboard, as Photoshop does, instead of staying behind the source (#5687).
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
@@ -364,6 +366,8 @@ impl PhotocraftApp {
         }
         palette::show(self, &ctx);
         dialogs::show(self, &ctx);
+        crate::genstudio_ui::show(self, &ctx);
+        crate::genfill_k_ui::show(self, &ctx);
         layers_panel_ui::show_dialog(self, &ctx);
         rasterize_prompt::run_pending(self, &ctx);
         jobs_ui::dialog(self, &ctx);

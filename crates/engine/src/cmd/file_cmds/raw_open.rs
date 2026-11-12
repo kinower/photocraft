@@ -42,12 +42,13 @@ fn prior_settings(path: Option<&str>) -> Result<Option<Prior>> {
     if path.is_some() { Err(EngineError::Other("cannot read RAW sidecars on the web".into())) } else { Ok(None) }
 }
 
-/// Sample the existing content at the Camera Raw histogram spacing, without a full proxy image.
-fn auto_sample(surface: &photocraft_raster::Surface) -> Vec<[f32; 4]> {
+/// Sample the existing content at the Camera Raw histogram spacing, without a full proxy image,
+/// with the sampled width and height.
+fn auto_sample(surface: &photocraft_raster::Surface) -> (Vec<[f32; 4]>, usize, usize) {
     let area = surface.content_bounds();
     let (w, h) = (area.x1.saturating_sub(area.x0).max(0) as usize, area.y1.saturating_sub(area.y0).max(0) as usize);
     if w == 0 || h == 0 {
-        return Vec::new();
+        return (Vec::new(), 0, 0);
     }
     let k = w.max(h).div_ceil(512).max(1);
     let mut out = Vec::with_capacity(w.div_ceil(k) * h.div_ceil(k));
@@ -57,7 +58,7 @@ fn auto_sample(surface: &photocraft_raster::Surface) -> Vec<[f32; 4]> {
         surface.read_rgba_into(photocraft_geom::Rect::new(area.x0, yy, area.x1, yy.saturating_add(1)), &mut row);
         out.extend(row.iter().step_by(k).copied());
     }
-    out
+    (out, w.div_ceil(k), h.div_ceil(k))
 }
 
 /// Develop representable prior settings at the sensor stage, retaining only the remaining RGB work.
@@ -80,7 +81,8 @@ pub(super) fn prepare(s: &Session, name: &str, path: Option<&str>, bytes: &[u8])
     }
     if prior.is_none() && defaults.apply_auto_tone {
         let surface = imported.document.layers.iter().find_map(|layer| layer.surface()).ok_or(EngineError::NoDocument)?;
-        photocraft_algo::camera_raw::auto_tone(&auto_sample(surface), &mut settings);
+        let (px, w, h) = auto_sample(surface);
+        photocraft_algo::camera_raw::auto_tone(&px, w, h, &settings).apply(&mut settings);
     }
     let tuning = RawTuning {
         temperature: settings.temperature,

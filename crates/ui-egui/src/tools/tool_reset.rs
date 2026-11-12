@@ -200,7 +200,7 @@ pub fn option_keys(tool: Tool) -> &'static [&'static str] {
         Tool::MagneticLasso => reset!(feather, anti_alias, magnetic_width, magnetic_contrast, magnetic_frequency, magnetic_pressure),
         Tool::MagicWand => reset!(tolerance, anti_alias, contiguous),
         Tool::QuickSelection => reset!(enhance_edge),
-        Tool::ObjectSelection => reset!(enhance_edge, object_finder),
+        Tool::ObjectSelection => reset!(enhance_edge, object_finder, object_ai_select),
         Tool::Crop => reset!(
             crop_ratio,
             crop_delete,
@@ -221,7 +221,7 @@ pub fn option_keys(tool: Tool) -> &'static [&'static str] {
         Tool::Brush => reset!(brush_clear),
         Tool::Pencil => reset!(pencil_auto_erase, pencil_clear),
         Tool::Eraser => reset!(eraser_mode, erase_to_history),
-        Tool::Remove => reset!(remove_new_layer, remove_after_each_stroke),
+        Tool::Remove => reset!(remove_new_layer, remove_after_each_stroke, remove_ai_fill),
         Tool::BackgroundEraser => reset!(bg_sampling, bg_limits, bg_tolerance, bg_protect_fg, bg_tolerance_control),
         Tool::ColorReplacement => reset!(cr_mode, cr_sampling, cr_limits, cr_tolerance, cr_anti_alias),
         Tool::MagicEraser => reset!(tolerance, anti_alias, contiguous, magic_eraser_opacity),

@@ -193,6 +193,9 @@ fn properties_body_inner(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let Some(layer) = doc.layer(id) else { return };
     // Header: kind icon, layer name and kind (#155); sections below draw their own separators.
     crate::props_layout::header(ui, layer);
+    if crate::genstudio_ai_ui::properties(app, ui, layer) {
+        return;
+    }
     let is_adjustment = matches!(layer.content, LayerContent::Adjustment(_));
     if is_adjustment || layer.artboard().is_some() || !t.pro {
         ui.add_space(4.0);

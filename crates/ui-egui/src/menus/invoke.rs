@@ -392,6 +392,12 @@ fn invoke_file_commands(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, 
 
 /// Dispatch UI actions and dialogs, falling back to the engine for other commands.
 pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if let Some(result) = crate::genstudio_ui::menu(app, id, &params) {
+        return result;
+    }
+    if let Some(result) = crate::genfill_k_ui::menu(app, id, &params) {
+        return result;
+    }
     if let Some(result) = crate::smart_svg_ui::intercept(app, id, &params) {
         return result;
     }

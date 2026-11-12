@@ -94,7 +94,8 @@ pub(super) fn preference_values(p: &prefs::Preferences) -> Map<String, Value> {
 pub fn preferences_changed(app: &PhotocraftApp, fields: &Map<String, Value>) -> bool {
     is_preferences(fields)
         && fields.get("values").is_some_and(Value::is_object)
-        && committed_values(app, fields) != Value::Object(preference_values(app.session.prefs()))
+        && (committed_values(app, fields) != Value::Object(preference_values(app.session.prefs()))
+            || fields.get("__genstudioView").is_some_and(|v| *v != crate::genstudio_ui::preferences_view(app)))
 }
 
 /// The values OK or Apply commits: the live preferences with only the settings edited in the
@@ -153,7 +154,8 @@ pub fn width(fields: &Map<String, Value>, available: f32) -> Option<f32> {
 
 /// Open Edit › Preferences on `section`.
 pub fn open_preferences(app: &mut PhotocraftApp, section: &str) -> u64 {
-    let section = if SECTIONS.iter().any(|(id, _)| *id == section) { section } else { "general" };
+    let section =
+        if SECTIONS.iter().any(|(id, _)| *id == section) && (photocraft_engine::genstudio::INSTALLED || section != "genStudio") { section } else { "general" };
     let working = preference_values(app.session.prefs());
     let order = field_order(app.session.prefs(), &working);
     // `__base` is what the draft started from, so OK and Apply commit only what was edited here.
@@ -341,8 +343,9 @@ pub(super) fn mismatch_body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
 pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
     match f.get("__prefsui").and_then(Value::as_str).unwrap_or("") {
         "prefs" => {
-            let values = committed_values(app, f);
-            app.run("prefs.set", json!({"path": "", "value": values}))
+            let mut fields = f.clone();
+            fields.insert("values".into(), committed_values(app, f));
+            crate::genstudio_ui::confirm_preferences(app, &fields)
         }
         "shortcuts" => {
             let overrides = f.get("overrides").cloned().unwrap_or(json!({}));

@@ -273,6 +273,8 @@ pub struct DocWindow {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UiState {
+    #[serde(default)]
+    pub gen_studio: crate::genstudio_ui::State,
     pub tool: Tool,
     /// The tools used so far, most recent first and each one once. The first tool of a shortcut
     /// group (the tools sharing a key, [`Tool::key`]) is the one its key brings back, and the first
@@ -619,6 +621,7 @@ impl Default for UiState {
     /// Creates the default UI state with default tools and empty drag state.
     fn default() -> Self {
         Self {
+            gen_studio: Default::default(),
             tool: Tool::Move,
             group_tools: Vec::new(),
             spring: None,

@@ -33,6 +33,12 @@ pub(crate) mod edit_session;
 pub mod file_dialog;
 pub mod file_open;
 pub mod frame_stages;
+pub mod genfill_k_ui;
+pub mod genstudio_ai_ui;
+pub mod genstudio_canvas;
+pub mod genstudio_fill_ui;
+pub mod genstudio_lora_ui;
+pub mod genstudio_ui;
 pub mod gpu_memo;
 pub mod gpu_status;
 pub mod home_recent_ui;
@@ -399,6 +405,10 @@ pub struct PhotocraftApp {
     /// Each as a `paint.remove` `strokes` entry: its points and the size, hardness and spacing it
     /// was drawn with, which its tint shows and its removal uses.
     pub(crate) remove_pending: Vec<serde_json::Value>,
+    pub(crate) ai_layers: crate::genstudio_ai_ui::Cache,
+    pub(crate) studio: crate::genstudio_canvas::Cache,
+    pub(crate) ai_fill_overlays: crate::genstudio_fill_ui::Cache,
+    pub(crate) genfill_k: crate::genfill_k_ui::State,
     pub(crate) remove_pending_target: Option<retouch_ui::RemoveTarget>,
     pub(crate) remove_trail: Option<stroke_trail::Trail>,
     /// The open menus' items, reused between frames (`menus::ItemCache`).
@@ -1053,6 +1063,9 @@ mod export_quality_tests;
 mod options_hit_area_tests;
 #[cfg(test)]
 mod select_and_mask_button_tests;
+
+#[cfg(test)]
+mod gengate_ui_tests;
 
 #[cfg(test)]
 mod saved_path_edit_tests;

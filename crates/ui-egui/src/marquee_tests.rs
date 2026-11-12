@@ -21,6 +21,7 @@ fn harness_with_step_dt(tool: Tool, step_dt: f32) -> Harness<'static, Photocraft
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
+    app.ui.gen_studio.hide_ai_bar = true;
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).with_step_dt(step_dt).build_ui_state(
         |ui, app: &mut PhotocraftApp| {

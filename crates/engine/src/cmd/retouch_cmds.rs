@@ -34,6 +34,7 @@ mod periodic;
 mod remove;
 pub use content_aware_move::{ContentAwarePreview, preview as content_aware_move_preview};
 pub use patch::preview as patch_preview;
+pub(crate) use remove::qwen::{AiRequest, capture_ai, run_ai};
 
 fn bad(cmd: &str, msg: impl Into<String>) -> EngineError {
     EngineError::BadParams { cmd: cmd.into(), msg: msg.into() }
@@ -322,7 +323,7 @@ pub fn specs() -> Vec<CommandSpec> {
             menu: &[],
             shortcut: None,
             params: brush_params!(
-                r#","strokes":[[[x,y,pressure?],…]|{"points":[…],"size"?,"hardness"?,"spacing"?},…]? (several strokes removed together, as one job and one undo step, each with its own size, hardness and spacing when given; else "points"),"closeLoops":bool=true (a stroke around an object removes what it encloses),"sampleAllLayers":bool=false,"newLayer":bool=false (the fill goes to a new layer above the target, which stays as it was) → {"damage","layer"?} (a background job)"#
+                r#","strokes":[[[x,y,pressure?],…]|{"points":[…],"size"?,"hardness"?,"spacing"?},…]? (several strokes removed together, as one job and one undo step, each with its own size, hardness and spacing when given; else "points"),"closeLoops":bool=true (a stroke around an object removes what it encloses),"sampleAllLayers":bool=false,"useAiFill":bool=false (use the selected GenGate engine; useQwen is a legacy alias),"newLayer":bool=false (the fill goes to a new layer above the target, which stays as it was) → {"damage","layer"?} (a background job)"#
             ),
             enabled: has_pixel_layer,
             run: remove::remove,
@@ -425,3 +426,6 @@ mod patch_history_names_tests;
 
 #[cfg(test)]
 mod remove_history_name_tests;
+
+#[cfg(test)]
+pub(crate) use remove::qwen::run_ai_with;

@@ -20,6 +20,15 @@ pub mod display_color;
 pub mod doc_path;
 pub mod filters;
 pub mod filters_ext;
+mod genfill_k;
+pub mod gengate_segmentation;
+pub mod genstudio;
+pub mod genstudio_ai;
+mod genstudio_edit;
+pub mod genstudio_generate;
+pub mod genstudio_lora;
+pub mod genstudio_queue;
+pub mod genstudio_workflow;
 mod group_options;
 pub mod guide_layout;
 pub mod hidden_target;
@@ -201,6 +210,7 @@ pub(crate) fn active_layer_of(s: &Session) -> std::result::Result<&photocraft_do
 
 #[derive(Default)]
 pub struct Session {
+    pub gen_studio: genstudio::Runtime,
     docs: Vec<DocState>,
     /// Override Open belongs only to one Batch scratch session, never to caller preferences.
     pub(crate) batch_open: Option<file_cmds::BatchOpen>,

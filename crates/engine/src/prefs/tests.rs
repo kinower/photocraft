@@ -487,6 +487,10 @@ fn menus_refuse_to_hide_essential_items() {
 fn preference_sections_are_commands() {
     let mut s = Session::new();
     for (id, title) in SECTIONS {
+        if id == "genStudio" && !crate::genstudio::INSTALLED {
+            assert!(s.execute("edit.preferences.genStudio", json!({})).is_err(), "an uninstalled engine has no preferences command");
+            continue;
+        }
         let r = s.execute(&format!("edit.preferences.{id}"), json!({})).unwrap();
         assert_eq!(r["section"], id);
         assert_eq!(r["title"], title);

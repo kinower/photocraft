@@ -489,6 +489,9 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
     for e in app.session.poll_jobs() {
         on_event(app, ctx, e);
     }
+    for error in photocraft_engine::genstudio_queue::take_errors(&mut app.session) {
+        notices::error(app, error);
+    }
     // A focused open tab that ended (or was cancelled elsewhere) gives way to the documents.
     if app.jobs.focus.is_some_and(|j| !app.jobs.opens.iter().any(|o| o.job == j)) {
         app.jobs.focus = app.jobs.opens.last().map(|o| o.job);
@@ -525,7 +528,7 @@ pub fn tick(app: &mut PhotocraftApp, ctx: &egui::Context) {
 /// unapplied on an otherwise idle event loop (notably Wayland): its document would remain locked,
 /// making Undo and Redo appear unavailable.
 pub fn keep_polling(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
-    if !app.session.has_jobs() {
+    if !app.session.has_jobs() && !photocraft_engine::genstudio_queue::has_pending(&app.session) {
         return false;
     }
     // Animate progress and poll for results at display rate; the UI thread only draws.
@@ -965,7 +968,17 @@ pub fn dialog(app: &mut PhotocraftApp, ctx: &egui::Context) {
                 &j.command,
                 !app.ui.view.hides_chrome() && app.ui.panels.status_bar && job_in_view(app).is_some_and(|shown| shown.id == j.id),
             );
-            if j.command == "file.automate.batch" || j.elapsed_ms < DIALOG_DELAY_MS || place || app.jobs.saves.iter().any(|s| s.job == j.id) {
+            if j.command == "file.automate.batch"
+                || j.elapsed_ms < DIALOG_DELAY_MS
+                || place
+                || (j.command.starts_with("genstudio.fill.")
+                    || j.command.starts_with("genstudio.studio.")
+                    || j.command.starts_with("genstudio.reference.")
+                    || j.command.starts_with("genstudio.loras."))
+                || j.label == "Remove · Ai Fill"
+                || j.command == "paint.remove" && j.label == "Remove · Qwen"
+                || app.jobs.saves.iter().any(|s| s.job == j.id)
+            {
                 return;
             }
             j

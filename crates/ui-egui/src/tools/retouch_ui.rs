@@ -283,6 +283,10 @@ pub(crate) fn finish_stroke_with(app: &mut PhotocraftApp, tool: Tool, points: &[
     // The layer mask, an alpha channel or the Quick Mask when targeted, as the Brush paints.
     p["target"] = crate::canvas::paint_target(app);
     crate::canvas::unsmoothed_line(&mut p, line);
+    if tool == Tool::Remove && o.remove_ai_fill && photocraft_engine::genstudio::INSTALLED {
+        queue_ai_fill(app, p);
+        return true;
+    }
     let result = app.run(cmd, p);
     app.retouch_from_live = matches!(&result, Ok(r) if r.get("fromLive").and_then(Value::as_bool) == Some(true));
     match result {
@@ -304,7 +308,7 @@ pub(crate) fn finish_stroke_with(app: &mut PhotocraftApp, tool: Tool, points: &[
 
 /// `paint.remove` params from the options bar (without the strokes).
 fn remove_params(o: &crate::state::ToolOptions, composite: bool) -> Value {
-    json!({"sampleAllLayers": o.sample_all.remove, "newLayer": o.remove_new_layer && composite})
+    json!({"sampleAllLayers": o.sample_all.remove, "newLayer": o.remove_new_layer && composite, "useAiFill": o.remove_ai_fill && photocraft_engine::genstudio::INSTALLED})
 }
 
 /// The selection a queued Remove stroke was drawn against. A later selection must not
@@ -357,6 +361,10 @@ pub fn remove_pending_commit(app: &mut PhotocraftApp) -> bool {
     p["strokes"] = json!(strokes);
     p["target"] = crate::canvas::paint_target(app);
     app.ui.status.clear();
+    if app.ui.tool_options.remove_ai_fill && photocraft_engine::genstudio::INSTALLED {
+        queue_ai_fill(app, p);
+        return true;
+    }
     if let Err(e) = app.run("paint.remove", p) {
         app.ui.status = e;
         app.ui.status_error = true;
@@ -632,8 +640,9 @@ pub fn finish_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end: [f
     }
     let (x, y) = (start[0].min(end[0]), start[1].min(end[1]));
     let (w, h) = ((end[0] - start[0]).abs(), (end[1] - start[1]).abs());
+    let ai_select = app.ui.tool_options.object_ai_select && photocraft_engine::genstudio::segmentation(&app.session);
     let sample_all = app.ui.tool_options.sample_all.object_selection;
-    if (w < 2.0 || h < 2.0) && app.ui.tool_options.object_finder {
+    if (w < 2.0 || h < 2.0) && !ai_select && app.ui.tool_options.object_finder {
         // Object Finder (#4087): the object under the click, as hovering highlighted it.
         let mode = match (mods.shift, mods.alt) {
             (true, true) => "intersect",
@@ -647,6 +656,9 @@ pub fn finish_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end: [f
         return;
     }
     if w < 2.0 || h < 2.0 {
+        if ai_select {
+            return;
+        }
         let size = app.session.tools.brush.size;
         let mode = if mods.alt { "subtract" } else { "add" };
         let r = app.run("select.quick", json!({"points": [[end[0], end[1]]], "size": size, "mode": mode, "sampleAllLayers": sample_all}));
@@ -660,7 +672,10 @@ pub fn finish_object_selection(app: &mut PhotocraftApp, start: [f64; 2], end: [f
     } else {
         "replace"
     };
-    let r = app.run("select.object", json!({"rect": [x.round(), y.round(), w.round(), h.round()], "mode": mode, "sampleAllLayers": sample_all}));
+    let r = app.run(
+        "select.object",
+        json!({"rect": [x.round(), y.round(), w.round(), h.round()], "mode": mode, "sampleAllLayers": sample_all, "aiSelect": ai_select}),
+    );
     report_smart_result(app, r, tl!("Object Selection found nothing there — try a tighter rectangle"));
 }
 
@@ -919,6 +934,9 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
             crate::widgets::checkbox(ui, &mut o.sample_all.remove, tl!("Sample All Layers"));
             ui.add_enabled_ui(composite, |ui| crate::widgets::checkbox(ui, &mut o.remove_new_layer, tl!("Create a new layer")));
             crate::widgets::checkbox(ui, &mut o.remove_after_each_stroke, tl!("Remove after each stroke"));
+            if photocraft_engine::genstudio::INSTALLED {
+                crate::widgets::checkbox(ui, &mut o.remove_ai_fill, "Ai Fill");
+            }
             if !app.remove_pending.is_empty() {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if crate::widgets::primary_button(ui, "✓", 32.0)
@@ -1154,6 +1172,13 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
             }
         }
         Tool::ObjectSelection => {
+            if photocraft_engine::genstudio::INSTALLED {
+                ui.add_enabled_ui(app.session.prefs().gen_studio.segmentation.enabled, |ui| {
+                    crate::widgets::checkbox(ui, &mut o.object_ai_select, "Ai Select");
+                })
+                .response
+                .on_hover_text("Enable AI segmentation in GenGate Settings");
+            }
             crate::widgets::checkbox(ui, &mut o.object_finder, tl!("Object Finder"));
             crate::widgets::checkbox(ui, &mut o.sample_all.object_selection, tl!("Sample All Layers"));
             opt(ui, tl!("Drag a rectangle around the object"));
@@ -1197,6 +1222,15 @@ fn pattern_stamp_options(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     crate::widgets::value_field(ui, &mut o.pattern_stamp_angle, -180.0..=180.0, "°", 58.0);
     if picked {
         let _ = app.run("pattern.presets.select", json!({"pattern": pat}));
+    }
+}
+
+fn queue_ai_fill(app: &mut PhotocraftApp, params: Value) {
+    if let Err(error) = app.run("genstudio.fill.enqueue", json!({"command": "paint.remove", "params": params})) {
+        app.ui.status = error;
+        app.ui.status_error = true;
+    } else {
+        app.ui.status_error = false;
     }
 }
 

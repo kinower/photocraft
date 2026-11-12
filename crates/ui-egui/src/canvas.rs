@@ -1647,6 +1647,10 @@ fn paint_primary_overlays(app: &mut PhotocraftApp, ui: &mut egui::Ui, view: &mut
     // The pending crop frame shows on its own document only, not on the other tiles (#1918).
     let foreign_crop = if app.session.active_index() == Some(idx) { None } else { app.ui.crop_rect.take() };
     draw_drag_preview(app, painter, xf);
+    crate::genstudio_fill_ui::show(app, ui, xf, idx);
+    if photocraft_engine::genstudio::INSTALLED {
+        crate::genstudio_ai_ui::show_bar(app, ui, xf, idx);
+    }
     if app.session.active_index() == Some(idx) {
         crate::move_box::draw(app, painter, xf);
     }
